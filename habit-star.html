@@ -535,46 +535,95 @@ const MSGS=['从第一个习惯开始今天吧','很好，已经起步了 ✦','
 function palFor(h){return h.color||PAL[habits.indexOf(h)%PAL.length];}
 
 // ③ LONG-PRESS DRAG — no visible handle
-let lpTimer=null,dragSrc=null,dragList=null,dragCb=null;
+// ── DRAG REORDER (touch long-press + desktop drag) ──
+let _lpTimer=null,_ghost=null,_dragIdx=null,_dragList=null,_dragCb=null,_dragParent=null,_startY=0,_offsetY=0;
+
+function _clearGhost(){
+  if(_ghost){_ghost.remove();_ghost=null;}
+  if(_dragParent){
+    [..._dragParent.children].forEach(c=>c.style.opacity='');
+    _dragParent=null;
+  }
+  _dragIdx=null;_dragList=null;_dragCb=null;
+}
+
 function setupDrag(card,idx,list,cb){
+  // Touch: long-press activates, then drag
   card.addEventListener('touchstart',e=>{
-    lpTimer=setTimeout(()=>{
-      card.classList.add('dragging');
-      dragSrc=idx;dragList=list;dragCb=cb;
-      navigator.vibrate&&navigator.vibrate(30);
-    },400);
+    const t=e.touches[0];
+    _startY=t.clientY;
+    _lpTimer=setTimeout(()=>{
+      navigator.vibrate&&navigator.vibrate([20]);
+      _dragIdx=idx;_dragList=list;_dragCb=cb;_dragParent=card.parentElement;
+      // create ghost
+      const r=card.getBoundingClientRect();
+      _offsetY=t.clientY-r.top;
+      _ghost=card.cloneNode(true);
+      Object.assign(_ghost.style,{
+        position:'fixed',left:r.left+'px',top:r.top+'px',
+        width:r.width+'px',zIndex:99,pointerEvents:'none',
+        opacity:'.92',transform:'scale(1.03)',
+        boxShadow:'0 12px 32px rgba(0,0,0,.18)',
+        transition:'none',borderRadius:'var(--r-lg)',
+      });
+      document.body.appendChild(_ghost);
+      card.style.opacity='.3';
+    },420);
   },{passive:true});
-  card.addEventListener('touchend',()=>{
-    clearTimeout(lpTimer);
-    if(card.classList.contains('dragging')){
-      card.classList.remove('dragging');dragSrc=null;
-    }
-  });
+
   card.addEventListener('touchmove',e=>{
-    if(dragSrc===null)return;
+    // cancel long-press if finger moved before activation
+    if(!_ghost){
+      if(Math.abs(e.touches[0].clientY-_startY)>8) clearTimeout(_lpTimer);
+      return;
+    }
     e.preventDefault();
-    const touch=e.touches[0];
-    const els=document.elementsFromPoint(touch.clientX,touch.clientY);
-    const target=els.find(el=>el.classList.contains('hcard')||el.classList.contains('wcard'));
-    if(!target)return;
-    const allCards=[...card.parentElement.children].filter(c=>c.classList.contains('hcard')||c.classList.contains('wcard'));
-    const ti=allCards.indexOf(target);
-    if(ti<0||ti===dragSrc)return;
-    const item=dragList.splice(dragSrc,1)[0];
-    dragList.splice(ti,0,item);
-    dragSrc=ti;
-    persist();dragCb();
+    const t=e.touches[0];
+    // move ghost
+    _ghost.style.top=(t.clientY-_offsetY)+'px';
+    // find which card the finger is over
+    _ghost.style.display='none';
+    const el=document.elementFromPoint(t.clientX,t.clientY);
+    _ghost.style.display='';
+    if(!el)return;
+    const target=el.closest('.hcard,.wcard');
+    if(!target||target===card||!_dragParent.contains(target))return;
+    const siblings=[..._dragParent.children].filter(c=>c.classList.contains('hcard')||c.classList.contains('wcard'));
+    const ti=siblings.indexOf(target);
+    if(ti<0||ti===_dragIdx)return;
+    const item=_dragList.splice(_dragIdx,1)[0];
+    _dragList.splice(ti,0,item);
+    _dragIdx=ti;
+    persist();_dragCb();
+    // after re-render card ref is stale — find new card at same index
+    setTimeout(()=>{
+      const newCards=[..._dragParent.children].filter(c=>c.classList.contains('hcard')||c.classList.contains('wcard'));
+      if(newCards[_dragIdx]) newCards[_dragIdx].style.opacity='.3';
+    },0);
   },{passive:false});
+
+  card.addEventListener('touchend',()=>{
+    clearTimeout(_lpTimer);
+    _clearGhost();
+  });
+  card.addEventListener('touchcancel',()=>{
+    clearTimeout(_lpTimer);
+    _clearGhost();
+  });
+
   // Desktop drag
   card.draggable=true;
-  card.addEventListener('dragstart',e=>{dragSrc=idx;dragList=list;dragCb=cb;card.classList.add('dragging');});
-  card.addEventListener('dragend',()=>{card.classList.remove('dragging');dragSrc=null;});
+  card.addEventListener('dragstart',e=>{
+    _dragIdx=idx;_dragList=list;_dragCb=cb;
+    card.classList.add('dragging');
+  });
+  card.addEventListener('dragend',()=>{card.classList.remove('dragging');_dragIdx=null;});
   card.addEventListener('dragover',e=>{
     e.preventDefault();
-    if(dragSrc===null||dragSrc===idx)return;
-    const item=dragList.splice(dragSrc,1)[0];
-    dragList.splice(idx,0,item);
-    dragSrc=idx;persist();dragCb();
+    if(_dragIdx===null||_dragIdx===idx)return;
+    const item=_dragList.splice(_dragIdx,1)[0];
+    _dragList.splice(idx,0,item);
+    _dragIdx=idx;persist();_dragCb();
   });
 }
 
