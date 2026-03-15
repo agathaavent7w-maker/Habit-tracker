@@ -196,10 +196,13 @@ body{font-family:'DM Sans',sans-serif;color:var(--text1);}
 .wdtl-fill{height:100%;border-radius:5px;background:linear-gradient(90deg,#50B888,#2A7050);transition:width .5s ease;position:relative;box-shadow:0 2px 8px var(--green-glow);}
 .wdtl-fill::after{content:'';position:absolute;right:-6px;top:-5px;width:19px;height:19px;border-radius:50%;background:linear-gradient(135deg,#5CC490,#2A7050);box-shadow:0 2px 8px var(--green-glow),0 0 0 3px var(--bg);}
 .wdtl-hint{font-size:13px;color:var(--text2);}
-.alloc-card{background:var(--bg);box-shadow:var(--sh-card);border-radius:var(--r-xl);padding:20px;display:flex;flex-direction:column;gap:14px;}
+.alloc-pool-row{font-size:14px;color:var(--text2);}
+.alloc-pool-row b{color:var(--green);font-weight:700;}
+.alloc-row-label{font-size:11px;font-weight:600;color:var(--text3);letter-spacing:.1em;text-transform:uppercase;}
+.alloc-card{background:var(--bg);box-shadow:var(--sh-card);border-radius:var(--r-xl);padding:20px;display:flex;flex-direction:column;gap:12px;}
 .alloc-title{font-family:'DM Serif Display',serif;font-size:18px;color:var(--text1);}
-.alloc-input-row{display:flex;align-items:center;gap:12px;}
-.alloc-input{flex:1;padding:13px 16px;background:var(--bg);box-shadow:var(--sh-in);border-radius:var(--r-md);border:none;font-family:'DM Serif Display',serif;font-size:24px;text-align:center;color:var(--text1);outline:none;-webkit-appearance:none;appearance:none;}
+.alloc-input-row{display:flex;align-items:center;gap:10px;}
+.alloc-input{flex:1;padding:13px 12px;background:var(--bg);box-shadow:var(--sh-in);border-radius:var(--r-md);border:none;font-family:'DM Serif Display',serif;font-size:22px;text-align:center;color:var(--text1);outline:none;-webkit-appearance:none;appearance:none;min-width:0;}
 .alloc-input:focus{box-shadow:var(--sh-in),0 0 0 2px rgba(58,140,106,.22);}
 .alloc-btn{padding:13px 18px;border-radius:var(--r-md);border:none;font-family:'DM Sans',sans-serif;font-size:13px;font-weight:600;cursor:pointer;transition:all .2s;white-space:nowrap;}
 .alloc-btn.primary{background:linear-gradient(135deg,#50B888,#2A7050);color:#fff;box-shadow:2px 3px 10px var(--green-glow);}
@@ -301,7 +304,7 @@ body{font-family:'DM Sans',sans-serif;color:var(--text1);}
       <button class="seg-btn" id="ws-archive" onclick="switchWS('archive')">已完成</button>
     </div>
     <div id="wlist"></div>
-    <button class="add-btn" onclick="openWM(null)"><span class="add-ico">+</span>添加奖励</button>
+    <button class="add-btn" id="w-add-btn" onclick="openWM(null)"><span class="add-ico">+</span>添加奖励</button>
   </div>
 
   <!-- HISTORY PAGE -->
@@ -344,7 +347,7 @@ body{font-family:'DM Sans',sans-serif;color:var(--text1);}
     </div>
   </div>
 
-  <!-- ④ REWARD DETAIL -->
+  <!-- REWARD DETAIL -->
   <div id="wdtl">
     <div class="wdtl-hdr">
       <button class="bk-btn" onclick="closeWDtl()">‹</button>
@@ -357,35 +360,38 @@ body{font-family:'DM Sans',sans-serif;color:var(--text1);}
       </div>
     </div>
     <div class="wdtl-body">
-      <div class="wdtl-hero">
-        <div class="wdtl-ico" id="wdtl-ico">🎁</div>
-        <div class="wdtl-info">
-          <div class="wdtl-name" id="wdtl-name">奖励</div>
-          <div class="wdtl-cost">目标 <b id="wdtl-cost">0</b> ★ · 已分配 <b id="wdtl-alloc">0</b> ★</div>
-        </div>
-      </div>
       <div class="wdtl-progress-card">
         <div class="wdtl-prog-top">
-          <div class="wdtl-prog-lbl">分配进度</div>
+          <div class="wdtl-prog-lbl">完成进度</div>
           <div class="wdtl-prog-frac"><span id="wdtl-pct">0</span>%</div>
         </div>
         <div class="wdtl-track"><div class="wdtl-fill" id="wdtl-fill" style="width:0%"></div></div>
-        <div class="wdtl-hint" id="wdtl-hint">还需分配 0 ★ 即可兑换</div>
+        <div class="wdtl-hint" id="wdtl-hint">目标 0 星，需 0 星即可兑换</div>
       </div>
       <div class="alloc-card">
-        <div class="alloc-title">投入星星</div>
+        <div class="alloc-pool-row">奖励池余额：<b id="alloc-pool-lbl">0</b> ★</div>
         <div class="alloc-input-row">
+          <span class="alloc-row-label" style="white-space:nowrap;padding-right:4px;">投入</span>
           <input class="alloc-input" id="alloc-input" type="number" min="1" inputmode="numeric" placeholder="0">
-          <button class="alloc-btn primary" id="alloc-confirm" onclick="doAlloc()">投入</button>
+          <button class="alloc-btn primary" id="alloc-confirm" onclick="doAlloc()">确认</button>
         </div>
-        <button class="alloc-btn secondary" id="alloc-all" onclick="doAllocAll()">一键投入全部剩余 ★</button>
-        <div class="alloc-hint" id="alloc-hint-txt">奖励池余额：0 ★</div>
+        <button class="alloc-btn secondary" id="alloc-all" onclick="doAllocAll()">All in</button>
       </div>
       <div class="wdtl-actions">
         <button class="dtl-btn" onclick="editFromWDtl()">编辑</button>
-        <button class="dtl-btn" id="wdtl-redeem-btn" onclick="redeemFromDtl()">兑换奖励</button>
+        <button class="dtl-btn" id="wdtl-redeem-btn" onclick="redeemFromDtl()">兑换</button>
         <button class="dtl-btn danger" onclick="deleteFromWDtl()">删除</button>
       </div>
+    </div>
+  </div>
+
+  <!-- CONGRATS SCREEN -->
+  <div id="congrats" style="display:none;position:absolute;inset:0;z-index:30;background:var(--bg);flex-direction:column;align-items:center;justify-content:center;gap:20px;padding:40px;">
+    <div id="congrats-ico" style="font-size:72px;line-height:1;"></div>
+    <div style="font-family:'DM Serif Display',serif;font-size:28px;color:var(--text1);text-align:center;">恭喜你！</div>
+    <div id="congrats-name" style="font-size:16px;color:var(--text2);text-align:center;line-height:1.6;"></div>
+    <div style="display:flex;flex-direction:column;gap:10px;width:100%;margin-top:10px;">
+      <button onclick="closeCongrats()" style="padding:16px;background:linear-gradient(135deg,#50B888,#2A7050);border:none;border-radius:16px;font-family:'DM Sans',sans-serif;font-size:15px;font-weight:600;color:#fff;cursor:pointer;box-shadow:3px 4px 12px var(--green-glow);">继续加油 ✦</button>
     </div>
   </div>
 
@@ -492,6 +498,33 @@ const PAL=[
 const TODAY=new Date(),TKEY=fmt(TODAY);
 function fmt(d){return d.toISOString().slice(0,10);}
 
+// ── AUTO MIGRATION: reads from any older prefix if current is empty ──
+(function migrate(){
+  const CUR='hs5_';
+  if(localStorage.getItem(CUR+'h')) return; // already on current version
+  const OLD_PREFIXES=['hs4_','hs3_','hs2_','hs_'];
+  for(const pfx of OLD_PREFIXES){
+    const h=localStorage.getItem(pfx+'h');
+    if(!h) continue;
+    // found old data — copy everything over
+    ['h','w','c','lg'].forEach(k=>{
+      const v=localStorage.getItem(pfx+k);
+      if(v!=null) localStorage.setItem(CUR+k,v);
+    });
+    // migrate today's check-in key if it exists
+    const oldCk=localStorage.getItem(pfx+'ck_'+fmt(TODAY));
+    if(oldCk) localStorage.setItem(CUR+'ck_'+fmt(TODAY),oldCk);
+    // ensure wishes have allocated field
+    try{
+      const wishes=JSON.parse(localStorage.getItem(CUR+'w')||'[]');
+      wishes.forEach(w=>{if(w.allocated===undefined)w.allocated=0;});
+      localStorage.setItem(CUR+'w',JSON.stringify(wishes));
+    }catch(e){}
+    console.log('Migrated data from',pfx,'to',CUR);
+    break;
+  }
+})();
+
 let habits=JSON.parse(localStorage.getItem('hs5_h')||'null')||[
   {id:1,name:'喝8杯水',icon:'💧',color:PAL[0],reward:2,startDate:'2025-03-01',checks:{},streak:7,totalChecks:18,archived:false},
   {id:2,name:'运动30分钟',icon:'🏃',color:PAL[1],reward:5,startDate:'2025-03-05',checks:{},streak:3,totalChecks:9,archived:false},
@@ -533,49 +566,113 @@ function switchTab(tab){
 
 const MSGS=['从第一个习惯开始今天吧','很好，已经起步了 ✦','节奏不错，继续','已完成一半以上','只差最后一步了','全部完成，今天很棒 ✦'];
 function palFor(h){return h.color||PAL[habits.indexOf(h)%PAL.length];}
+function totalEarned(){return log.filter(l=>l.type==='earn').reduce((s,l)=>s+l.coins,0);}
 
-// ③ LONG-PRESS DRAG — no visible handle
-let lpTimer=null,dragSrc=null,dragList=null,dragCb=null;
-function setupDrag(card,idx,list,cb){
+// ── DRAG REORDER ──
+// Strategy: long-press activates, drag moves DOM nodes visually,
+// on release read DOM order → write back to data array → persist → re-render once.
+let _lpt=null,_dragging=null,_startY=0,_dragListId=null;
+
+function setupDrag(card,dataId,listId){
+  // listId: 'habits'|'wishes'  dataId: item id
+  card.dataset.dragId=dataId;
+  card.dataset.dragList=listId;
+
   card.addEventListener('touchstart',e=>{
-    lpTimer=setTimeout(()=>{
-      card.classList.add('dragging');
-      dragSrc=idx;dragList=list;dragCb=cb;
-      navigator.vibrate&&navigator.vibrate(30);
-    },400);
+    _startY=e.touches[0].clientY;
+    _lpt=setTimeout(()=>{
+      navigator.vibrate&&navigator.vibrate([30]);
+      _dragging=card;
+      _dragListId=listId;
+      card.style.opacity='.3';
+      card.style.boxShadow='var(--sh-in)';
+    },430);
   },{passive:true});
+
+  card.addEventListener('touchmove',e=>{
+    if(!_dragging){
+      if(Math.abs(e.touches[0].clientY-_startY)>12) clearTimeout(_lpt);
+      return;
+    }
+    e.preventDefault();
+    const ty=e.touches[0].clientY;
+    const parent=_dragging.parentElement;
+    const cards=[...parent.children].filter(c=>c.dataset.dragList===_dragListId);
+    // find card whose midpoint is closest below finger
+    let insertBefore=null;
+    for(const c of cards){
+      if(c===_dragging) continue;
+      const r=c.getBoundingClientRect();
+      if(ty<r.top+r.height/2){insertBefore=c;break;}
+    }
+    if(insertBefore) parent.insertBefore(_dragging,insertBefore);
+    else parent.appendChild(_dragging);
+  },{passive:false});
+
   card.addEventListener('touchend',()=>{
-    clearTimeout(lpTimer);
-    if(card.classList.contains('dragging')){
-      card.classList.remove('dragging');dragSrc=null;
+    clearTimeout(_lpt);
+    if(_dragging){
+      _dragging.style.opacity='';
+      _dragging.style.boxShadow='';
+      _commitOrder(_dragListId);
+      _dragging=null;_dragListId=null;
     }
   });
-  card.addEventListener('touchmove',e=>{
-    if(dragSrc===null)return;
-    e.preventDefault();
-    const touch=e.touches[0];
-    const els=document.elementsFromPoint(touch.clientX,touch.clientY);
-    const target=els.find(el=>el.classList.contains('hcard')||el.classList.contains('wcard'));
-    if(!target)return;
-    const allCards=[...card.parentElement.children].filter(c=>c.classList.contains('hcard')||c.classList.contains('wcard'));
-    const ti=allCards.indexOf(target);
-    if(ti<0||ti===dragSrc)return;
-    const item=dragList.splice(dragSrc,1)[0];
-    dragList.splice(ti,0,item);
-    dragSrc=ti;
-    persist();dragCb();
-  },{passive:false});
-  // Desktop drag
+  card.addEventListener('touchcancel',()=>{
+    clearTimeout(_lpt);
+    if(_dragging){_dragging.style.opacity='';_dragging.style.boxShadow='';}
+    _dragging=null;_dragListId=null;
+  });
+
+  // Desktop
   card.draggable=true;
-  card.addEventListener('dragstart',e=>{dragSrc=idx;dragList=list;dragCb=cb;card.classList.add('dragging');});
-  card.addEventListener('dragend',()=>{card.classList.remove('dragging');dragSrc=null;});
+  card.addEventListener('dragstart',()=>{
+    _dragging=card;_dragListId=listId;
+    setTimeout(()=>card.style.opacity='.3',0);
+  });
+  card.addEventListener('dragend',()=>{
+    card.style.opacity='';
+    _commitOrder(_dragListId);
+    _dragging=null;_dragListId=null;
+  });
   card.addEventListener('dragover',e=>{
     e.preventDefault();
-    if(dragSrc===null||dragSrc===idx)return;
-    const item=dragList.splice(dragSrc,1)[0];
-    dragList.splice(idx,0,item);
-    dragSrc=idx;persist();dragCb();
+    if(!_dragging||_dragging===card) return;
+    const r=card.getBoundingClientRect();
+    const mid=r.top+r.height/2;
+    if(e.clientY<mid) card.parentElement.insertBefore(_dragging,card);
+    else card.parentElement.insertBefore(_dragging,card.nextSibling);
   });
+}
+
+function _commitOrder(listId){
+  // read DOM order of cards, map back to data array order
+  const listEl=document.getElementById(listId==='habits'?'hlist':'wlist');
+  if(!listEl) return;
+  const ids=[...listEl.children]
+    .filter(c=>c.dataset.dragList===listId)
+    .map(c=>parseInt(c.dataset.dragId));
+  if(listId==='habits'){
+    habits.sort((a,b)=>{
+      const ai=ids.indexOf(a.id),bi=ids.indexOf(b.id);
+      if(ai===-1&&bi===-1) return 0;
+      if(ai===-1) return 1;
+      if(bi===-1) return -1;
+      return ai-bi;
+    });
+  } else {
+    wishes.sort((a,b)=>{
+      const ai=ids.indexOf(a.id),bi=ids.indexOf(b.id);
+      if(ai===-1&&bi===-1) return 0;
+      if(ai===-1) return 1;
+      if(bi===-1) return -1;
+      return ai-bi;
+    });
+  }
+  persist();
+  // re-render to sync state (done badges etc)
+  if(listId==='habits') renderH();
+  else renderW();
 }
 
 // ── RENDER HABITS ──
@@ -602,7 +699,7 @@ function renderH(){
           <svg viewBox="0 0 16 16" fill="none"><path d="M3 8.5l3.5 3.5 6.5-7.5" stroke="white" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>
         </div>
       </div>`;
-    setupDrag(card,idx,active,()=>{active.forEach(h2=>{const i=habits.findIndex(x=>x.id===h2.id);if(i>-1)habits[i]=h2;});renderH();});
+    setupDrag(card,h.id,'habits');
     list.appendChild(card);
   });
   const alist=document.getElementById('hlist-archived');
@@ -627,7 +724,7 @@ function renderH(){
   document.getElementById('pdone').textContent=done;
   document.getElementById('ptotal').textContent=total;
   document.getElementById('phint').textContent=MSGS[done===total&&total>0?5:Math.min(Math.floor(done/Math.max(total,1)*4.99),4)];
-  document.getElementById('coins').textContent=coins;
+  document.getElementById('coins').textContent=totalEarned();
 }
 
 function toggle(id){
@@ -704,6 +801,7 @@ function switchWS(s){
   wseg=s;
   document.getElementById('ws-active').classList.toggle('active',s==='active');
   document.getElementById('ws-archive').classList.toggle('active',s==='archive');
+  document.getElementById('w-add-btn').style.display=s==='active'?'':'none';
   renderW();
 }
 function renderW(){
@@ -747,7 +845,7 @@ function renderW(){
           <div class="w-allocated">已分配 <b>★ ${alloc}</b> / ${w.cost}</div>
           <div class="w-pct"><b>${pct}%</b></div>
         </div>`;
-      setupDrag(card,idx,active,()=>{active.forEach(w2=>{const i=wishes.findIndex(x=>x.id===w2.id);if(i>-1)wishes[i]=w2;});renderW();});
+      setupDrag(card,w.id,'wishes');
     }
     list.appendChild(card);
   });
@@ -755,7 +853,7 @@ function renderW(){
 function updatePool(){
   document.getElementById('pool-val').innerHTML=coins+' <span style="font-size:20px;">★</span>';
   document.getElementById('pool-sub').textContent=coins>0?'点击奖励项目进行分配':'打卡后星星将累积在这里';
-  document.getElementById('coins').textContent=coins;
+  document.getElementById('coins').textContent=totalEarned();
 }
 function reuse(id){
   const w=wishes.find(x=>x.id===id);if(!w)return;
@@ -783,25 +881,27 @@ function refreshWDtl(){
   const alloc=w.allocated||0;
   const pct=Math.min(100,Math.round(alloc/w.cost*100));
   const remaining=Math.max(0,w.cost-alloc);
-  document.getElementById('wdtl-title').textContent=w.name;
-  document.getElementById('wdtl-ico').textContent=w.icon;
-  document.getElementById('wdtl-name').textContent=w.name;
-  document.getElementById('wdtl-cost').textContent=w.cost;
-  document.getElementById('wdtl-alloc').textContent=alloc;
+  const canRedeem=alloc>=w.cost;
+  // ① icon + name as title (same style as habit detail)
+  document.getElementById('wdtl-title').textContent=w.icon+'  '+w.name;
   document.getElementById('wdtl-pct').textContent=pct;
   document.getElementById('wdtl-fill').style.width=pct+'%';
   document.getElementById('wdtl-pool').textContent=coins;
-  document.getElementById('wdtl-hint').textContent=remaining>0?'还需分配 '+remaining+' ★ 即可兑换':'★ 已达兑换条件，可立即兑换！';
-  document.getElementById('alloc-hint-txt').textContent='奖励池余额：'+coins+' ★';
+  // ③ hint: 目标X星，需X星即可兑换
+  document.getElementById('wdtl-hint').textContent=
+    canRedeem?'已达兑换条件，可立即兑换 🎉':
+    '目标 '+w.cost+' 星，需 '+remaining+' 星即可兑换';
+  document.getElementById('alloc-pool-lbl').textContent=coins;
   document.getElementById('alloc-input').value='';
   document.getElementById('alloc-input').max=coins;
-  const canRedeem=alloc>=w.cost&&!w.archived;
+  document.getElementById('alloc-confirm').disabled=coins<=0;
+  const ab=document.getElementById('alloc-all');
+  ab.disabled=coins<=0;
+  ab.textContent='All in';
   const rb=document.getElementById('wdtl-redeem-btn');
-  rb.textContent=canRedeem?'🎉 立即兑换':'兑换（待达标）';
-  rb.style.color=canRedeem?'var(--green)':'var(--text3)';
   rb.disabled=!canRedeem;
-  document.getElementById('alloc-all').disabled=coins<=0;
-  document.getElementById('alloc-all').textContent='一键投入全部剩余 ★（'+coins+' ★）';
+  rb.style.color=canRedeem?'var(--green)':'var(--text3)';
+  rb.style.opacity=canRedeem?'1':'0.4';
 }
 function closeWDtl(){document.getElementById('wdtl').classList.remove('open');wdid=null;renderW();}
 function editFromWDtl(){const id=wdid;closeWDtl();openWM(id);}
@@ -810,7 +910,18 @@ function redeemFromDtl(){
   if((w.allocated||0)<w.cost){toast('星星还不够哦，继续分配吧');return;}
   w.archived=true;
   log.unshift({type:'spend',name:'兑换：'+w.name,icon:w.icon,coins:w.cost,time:new Date().toLocaleString('zh-CN',{month:'numeric',day:'numeric',hour:'2-digit',minute:'2-digit'})});
-  persist();closeWDtl();toast('🎉  「'+w.name+'」已兑换！');
+  persist();
+  // show congrats
+  document.getElementById('congrats-ico').textContent=w.icon;
+  document.getElementById('congrats-name').textContent='「'+w.name+'」已成功兑换！\n你的坚持值得这份奖励 ✦';
+  const cg=document.getElementById('congrats');
+  cg.style.display='flex';
+  // confetti-like pulse
+  cg.style.animation='none';
+}
+function closeCongrats(){
+  document.getElementById('congrats').style.display='none';
+  closeWDtl();
 }
 function deleteFromWDtl(){
   const w=wishes.find(x=>x.id===wdid);if(!w)return;
