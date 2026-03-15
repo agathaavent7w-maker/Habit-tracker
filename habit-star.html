@@ -201,8 +201,8 @@ body{font-family:'DM Sans',sans-serif;color:var(--text1);}
 .alloc-row-label{font-size:11px;font-weight:600;color:var(--text3);letter-spacing:.1em;text-transform:uppercase;}
 .alloc-card{background:var(--bg);box-shadow:var(--sh-card);border-radius:var(--r-xl);padding:20px;display:flex;flex-direction:column;gap:12px;}
 .alloc-title{font-family:'DM Serif Display',serif;font-size:18px;color:var(--text1);}
-.alloc-input-row{display:flex;align-items:center;gap:12px;}
-.alloc-input{flex:1;padding:13px 16px;background:var(--bg);box-shadow:var(--sh-in);border-radius:var(--r-md);border:none;font-family:'DM Serif Display',serif;font-size:24px;text-align:center;color:var(--text1);outline:none;-webkit-appearance:none;appearance:none;}
+.alloc-input-row{display:flex;align-items:center;gap:10px;}
+.alloc-input{flex:1;padding:13px 12px;background:var(--bg);box-shadow:var(--sh-in);border-radius:var(--r-md);border:none;font-family:'DM Serif Display',serif;font-size:22px;text-align:center;color:var(--text1);outline:none;-webkit-appearance:none;appearance:none;min-width:0;}
 .alloc-input:focus{box-shadow:var(--sh-in),0 0 0 2px rgba(58,140,106,.22);}
 .alloc-btn{padding:13px 18px;border-radius:var(--r-md);border:none;font-family:'DM Sans',sans-serif;font-size:13px;font-weight:600;cursor:pointer;transition:all .2s;white-space:nowrap;}
 .alloc-btn.primary{background:linear-gradient(135deg,#50B888,#2A7050);color:#fff;box-shadow:2px 3px 10px var(--green-glow);}
@@ -360,25 +360,18 @@ body{font-family:'DM Sans',sans-serif;color:var(--text1);}
       </div>
     </div>
     <div class="wdtl-body">
-      <div class="wdtl-hero">
-        <div class="wdtl-ico" id="wdtl-ico">🎁</div>
-        <div class="wdtl-info">
-          <div class="wdtl-name" id="wdtl-name">奖励</div>
-          <div class="wdtl-cost">目标 <b id="wdtl-cost">0</b> ★ · 已分配 <b id="wdtl-alloc">0</b> ★</div>
-        </div>
-      </div>
       <div class="wdtl-progress-card">
         <div class="wdtl-prog-top">
-          <div class="wdtl-prog-lbl">分配进度</div>
+          <div class="wdtl-prog-lbl">完成进度</div>
           <div class="wdtl-prog-frac"><span id="wdtl-pct">0</span>%</div>
         </div>
         <div class="wdtl-track"><div class="wdtl-fill" id="wdtl-fill" style="width:0%"></div></div>
-        <div class="wdtl-hint" id="wdtl-hint">还需分配 0 ★ 即可兑换</div>
+        <div class="wdtl-hint" id="wdtl-hint">目标 0 星，需 0 星即可兑换</div>
       </div>
       <div class="alloc-card">
         <div class="alloc-pool-row">奖励池余额：<b id="alloc-pool-lbl">0</b> ★</div>
-        <div class="alloc-row-label">投入</div>
         <div class="alloc-input-row">
+          <span class="alloc-row-label" style="white-space:nowrap;padding-right:4px;">投入</span>
           <input class="alloc-input" id="alloc-input" type="number" min="1" inputmode="numeric" placeholder="0">
           <button class="alloc-btn primary" id="alloc-confirm" onclick="doAlloc()">确认</button>
         </div>
@@ -575,112 +568,111 @@ const MSGS=['从第一个习惯开始今天吧','很好，已经起步了 ✦','
 function palFor(h){return h.color||PAL[habits.indexOf(h)%PAL.length];}
 function totalEarned(){return log.filter(l=>l.type==='earn').reduce((s,l)=>s+l.coins,0);}
 
-// ③ LONG-PRESS DRAG — no visible handle
-// ── DRAG REORDER (touch long-press + desktop drag) ──
-let _lpTimer=null,_ghost=null,_dragIdx=null,_dragList=null,_dragCb=null,_dragParent=null,_startY=0,_offsetY=0,_isDragging=false;
+// ── DRAG REORDER ──
+// Strategy: long-press activates, drag moves DOM nodes visually,
+// on release read DOM order → write back to data array → persist → re-render once.
+let _lpt=null,_dragging=null,_startY=0,_dragListId=null;
 
-function _clearGhost(doRender){
-  if(_ghost){_ghost.remove();_ghost=null;}
-  if(_dragParent){
-    [..._dragParent.children].forEach(c=>{c.style.opacity='';c.style.transform='';});
-    _dragParent=null;
-  }
-  if(doRender&&_dragCb) _dragCb();
-  _dragIdx=null;_dragList=null;_dragCb=null;_isDragging=false;
-}
+function setupDrag(card,dataId,listId){
+  // listId: 'habits'|'wishes'  dataId: item id
+  card.dataset.dragId=dataId;
+  card.dataset.dragList=listId;
 
-function setupDrag(card,idx,list,cb){
   card.addEventListener('touchstart',e=>{
-    const t=e.touches[0];
-    _startY=t.clientY;
-    _lpTimer=setTimeout(()=>{
-      _isDragging=true;
-      navigator.vibrate&&navigator.vibrate([25]);
-      _dragIdx=idx;_dragList=list;_dragCb=cb;_dragParent=card.parentElement;
-      const r=card.getBoundingClientRect();
-      _offsetY=t.clientY-r.top;
-      _ghost=card.cloneNode(true);
-      Object.assign(_ghost.style,{
-        position:'fixed',left:r.left+'px',top:(t.clientY-_offsetY)+'px',
-        width:r.width+'px',zIndex:999,pointerEvents:'none',
-        opacity:'.9',transform:'scale(1.04)',
-        boxShadow:'0 16px 40px rgba(0,0,0,.22)',
-        transition:'none',background:'var(--bg)',
-        borderRadius:'16px',
-      });
-      document.body.appendChild(_ghost);
-      card.style.opacity='.25';
-    },420);
+    _startY=e.touches[0].clientY;
+    _lpt=setTimeout(()=>{
+      navigator.vibrate&&navigator.vibrate([30]);
+      _dragging=card;
+      _dragListId=listId;
+      card.style.opacity='.3';
+      card.style.boxShadow='var(--sh-in)';
+    },430);
   },{passive:true});
 
   card.addEventListener('touchmove',e=>{
-    if(!_isDragging){
-      if(Math.abs(e.touches[0].clientY-_startY)>10) clearTimeout(_lpTimer);
+    if(!_dragging){
+      if(Math.abs(e.touches[0].clientY-_startY)>12) clearTimeout(_lpt);
       return;
     }
     e.preventDefault();
-    const t=e.touches[0];
-    if(_ghost) _ghost.style.top=(t.clientY-_offsetY)+'px';
-    // detect target without triggering ghost
-    if(_ghost) _ghost.style.visibility='hidden';
-    const el=document.elementFromPoint(t.clientX,t.clientY);
-    if(_ghost) _ghost.style.visibility='';
-    if(!el||!_dragParent) return;
-    const target=el.closest('.hcard,.wcard');
-    if(!target||!_dragParent.contains(target)) return;
-    const siblings=[..._dragParent.children].filter(c=>
-      c.classList.contains('hcard')||c.classList.contains('wcard')
-    );
-    const ti=siblings.indexOf(target);
-    if(ti<0||ti===_dragIdx) return;
-    // reorder in-place without re-rendering
-    const item=_dragList.splice(_dragIdx,1)[0];
-    _dragList.splice(ti,0,item);
-    _dragIdx=ti;
-    // visually swap DOM nodes
-    if(ti>siblings.indexOf(card)){
-      target.parentNode.insertBefore(card,target.nextSibling);
-    } else {
-      target.parentNode.insertBefore(card,target);
+    const ty=e.touches[0].clientY;
+    const parent=_dragging.parentElement;
+    const cards=[...parent.children].filter(c=>c.dataset.dragList===_dragListId);
+    // find card whose midpoint is closest below finger
+    let insertBefore=null;
+    for(const c of cards){
+      if(c===_dragging) continue;
+      const r=c.getBoundingClientRect();
+      if(ty<r.top+r.height/2){insertBefore=c;break;}
     }
-    card.style.opacity='.25';
+    if(insertBefore) parent.insertBefore(_dragging,insertBefore);
+    else parent.appendChild(_dragging);
   },{passive:false});
 
   card.addEventListener('touchend',()=>{
-    clearTimeout(_lpTimer);
-    if(_isDragging){ persist();_clearGhost(true); }
+    clearTimeout(_lpt);
+    if(_dragging){
+      _dragging.style.opacity='';
+      _dragging.style.boxShadow='';
+      _commitOrder(_dragListId);
+      _dragging=null;_dragListId=null;
+    }
   });
   card.addEventListener('touchcancel',()=>{
-    clearTimeout(_lpTimer);
-    if(_isDragging) _clearGhost(true);
+    clearTimeout(_lpt);
+    if(_dragging){_dragging.style.opacity='';_dragging.style.boxShadow='';}
+    _dragging=null;_dragListId=null;
   });
 
-  // Desktop drag
+  // Desktop
   card.draggable=true;
   card.addEventListener('dragstart',()=>{
-    _dragIdx=idx;_dragList=list;_dragCb=cb;_dragParent=card.parentElement;
-    card.classList.add('dragging');
+    _dragging=card;_dragListId=listId;
+    setTimeout(()=>card.style.opacity='.3',0);
   });
   card.addEventListener('dragend',()=>{
-    card.classList.remove('dragging');
-    persist();if(_dragCb)_dragCb();
-    _dragIdx=null;_dragList=null;_dragCb=null;_dragParent=null;
+    card.style.opacity='';
+    _commitOrder(_dragListId);
+    _dragging=null;_dragListId=null;
   });
   card.addEventListener('dragover',e=>{
     e.preventDefault();
-    if(_dragIdx===null||_dragIdx===idx) return;
-    const item=_dragList.splice(_dragIdx,1)[0];
-    _dragList.splice(idx,0,item);
-    _dragIdx=idx;
-    const parent=card.parentElement;
-    const allCards=[...parent.children].filter(c=>c.classList.contains('hcard')||c.classList.contains('wcard'));
-    // DOM swap
-    if(idx>allCards.indexOf(card)){
-      parent.insertBefore(allCards[allCards.indexOf(card)],card.nextSibling);
-    } else {
-      parent.insertBefore(card,allCards[idx]);
-    }
+    if(!_dragging||_dragging===card) return;
+    const r=card.getBoundingClientRect();
+    const mid=r.top+r.height/2;
+    if(e.clientY<mid) card.parentElement.insertBefore(_dragging,card);
+    else card.parentElement.insertBefore(_dragging,card.nextSibling);
   });
+}
+
+function _commitOrder(listId){
+  // read DOM order of cards, map back to data array order
+  const listEl=document.getElementById(listId==='habits'?'hlist':'wlist');
+  if(!listEl) return;
+  const ids=[...listEl.children]
+    .filter(c=>c.dataset.dragList===listId)
+    .map(c=>parseInt(c.dataset.dragId));
+  if(listId==='habits'){
+    habits.sort((a,b)=>{
+      const ai=ids.indexOf(a.id),bi=ids.indexOf(b.id);
+      if(ai===-1&&bi===-1) return 0;
+      if(ai===-1) return 1;
+      if(bi===-1) return -1;
+      return ai-bi;
+    });
+  } else {
+    wishes.sort((a,b)=>{
+      const ai=ids.indexOf(a.id),bi=ids.indexOf(b.id);
+      if(ai===-1&&bi===-1) return 0;
+      if(ai===-1) return 1;
+      if(bi===-1) return -1;
+      return ai-bi;
+    });
+  }
+  persist();
+  // re-render to sync state (done badges etc)
+  if(listId==='habits') renderH();
+  else renderW();
 }
 
 // ── RENDER HABITS ──
@@ -707,7 +699,7 @@ function renderH(){
           <svg viewBox="0 0 16 16" fill="none"><path d="M3 8.5l3.5 3.5 6.5-7.5" stroke="white" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>
         </div>
       </div>`;
-    setupDrag(card,idx,active,()=>{active.forEach(h2=>{const i=habits.findIndex(x=>x.id===h2.id);if(i>-1)habits[i]=h2;});renderH();});
+    setupDrag(card,h.id,'habits');
     list.appendChild(card);
   });
   const alist=document.getElementById('hlist-archived');
@@ -853,7 +845,7 @@ function renderW(){
           <div class="w-allocated">已分配 <b>★ ${alloc}</b> / ${w.cost}</div>
           <div class="w-pct"><b>${pct}%</b></div>
         </div>`;
-      setupDrag(card,idx,active,()=>{active.forEach(w2=>{const i=wishes.findIndex(x=>x.id===w2.id);if(i>-1)wishes[i]=w2;});renderW();});
+      setupDrag(card,w.id,'wishes');
     }
     list.appendChild(card);
   });
@@ -890,26 +882,26 @@ function refreshWDtl(){
   const pct=Math.min(100,Math.round(alloc/w.cost*100));
   const remaining=Math.max(0,w.cost-alloc);
   const canRedeem=alloc>=w.cost;
-  document.getElementById('wdtl-title').textContent=w.name;
-  document.getElementById('wdtl-ico').textContent=w.icon;
-  document.getElementById('wdtl-name').textContent=w.name;
-  document.getElementById('wdtl-cost').textContent=w.cost;
-  document.getElementById('wdtl-alloc').textContent=alloc;
+  // ① icon + name as title (same style as habit detail)
+  document.getElementById('wdtl-title').textContent=w.icon+'  '+w.name;
   document.getElementById('wdtl-pct').textContent=pct;
   document.getElementById('wdtl-fill').style.width=pct+'%';
   document.getElementById('wdtl-pool').textContent=coins;
-  document.getElementById('wdtl-hint').textContent=remaining>0?'还需分配 '+remaining+' ★ 即可兑换':'已达兑换条件，可立即兑换 🎉';
+  // ③ hint: 目标X星，需X星即可兑换
+  document.getElementById('wdtl-hint').textContent=
+    canRedeem?'已达兑换条件，可立即兑换 🎉':
+    '目标 '+w.cost+' 星，需 '+remaining+' 星即可兑换';
   document.getElementById('alloc-pool-lbl').textContent=coins;
   document.getElementById('alloc-input').value='';
   document.getElementById('alloc-input').max=coins;
   document.getElementById('alloc-confirm').disabled=coins<=0;
   const ab=document.getElementById('alloc-all');
   ab.disabled=coins<=0;
-  ab.textContent='All in'+(coins>0?' ('+coins+' ★)':'');
+  ab.textContent='All in';
   const rb=document.getElementById('wdtl-redeem-btn');
   rb.disabled=!canRedeem;
   rb.style.color=canRedeem?'var(--green)':'var(--text3)';
-  rb.style.opacity=canRedeem?'1':'0.45';
+  rb.style.opacity=canRedeem?'1':'0.4';
 }
 function closeWDtl(){document.getElementById('wdtl').classList.remove('open');wdid=null;renderW();}
 function editFromWDtl(){const id=wdid;closeWDtl();openWM(id);}
