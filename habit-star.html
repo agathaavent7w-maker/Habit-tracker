@@ -196,7 +196,10 @@ body{font-family:'DM Sans',sans-serif;color:var(--text1);}
 .wdtl-fill{height:100%;border-radius:5px;background:linear-gradient(90deg,#50B888,#2A7050);transition:width .5s ease;position:relative;box-shadow:0 2px 8px var(--green-glow);}
 .wdtl-fill::after{content:'';position:absolute;right:-6px;top:-5px;width:19px;height:19px;border-radius:50%;background:linear-gradient(135deg,#5CC490,#2A7050);box-shadow:0 2px 8px var(--green-glow),0 0 0 3px var(--bg);}
 .wdtl-hint{font-size:13px;color:var(--text2);}
-.alloc-card{background:var(--bg);box-shadow:var(--sh-card);border-radius:var(--r-xl);padding:20px;display:flex;flex-direction:column;gap:14px;}
+.alloc-pool-row{font-size:14px;color:var(--text2);}
+.alloc-pool-row b{color:var(--green);font-weight:700;}
+.alloc-row-label{font-size:11px;font-weight:600;color:var(--text3);letter-spacing:.1em;text-transform:uppercase;}
+.alloc-card{background:var(--bg);box-shadow:var(--sh-card);border-radius:var(--r-xl);padding:20px;display:flex;flex-direction:column;gap:12px;}
 .alloc-title{font-family:'DM Serif Display',serif;font-size:18px;color:var(--text1);}
 .alloc-input-row{display:flex;align-items:center;gap:12px;}
 .alloc-input{flex:1;padding:13px 16px;background:var(--bg);box-shadow:var(--sh-in);border-radius:var(--r-md);border:none;font-family:'DM Serif Display',serif;font-size:24px;text-align:center;color:var(--text1);outline:none;-webkit-appearance:none;appearance:none;}
@@ -301,7 +304,7 @@ body{font-family:'DM Sans',sans-serif;color:var(--text1);}
       <button class="seg-btn" id="ws-archive" onclick="switchWS('archive')">已完成</button>
     </div>
     <div id="wlist"></div>
-    <button class="add-btn" onclick="openWM(null)"><span class="add-ico">+</span>添加奖励</button>
+    <button class="add-btn" id="w-add-btn" onclick="openWM(null)"><span class="add-ico">+</span>添加奖励</button>
   </div>
 
   <!-- HISTORY PAGE -->
@@ -344,7 +347,7 @@ body{font-family:'DM Sans',sans-serif;color:var(--text1);}
     </div>
   </div>
 
-  <!-- ④ REWARD DETAIL -->
+  <!-- REWARD DETAIL -->
   <div id="wdtl">
     <div class="wdtl-hdr">
       <button class="bk-btn" onclick="closeWDtl()">‹</button>
@@ -373,19 +376,29 @@ body{font-family:'DM Sans',sans-serif;color:var(--text1);}
         <div class="wdtl-hint" id="wdtl-hint">还需分配 0 ★ 即可兑换</div>
       </div>
       <div class="alloc-card">
-        <div class="alloc-title">投入星星</div>
+        <div class="alloc-pool-row">奖励池余额：<b id="alloc-pool-lbl">0</b> ★</div>
+        <div class="alloc-row-label">投入</div>
         <div class="alloc-input-row">
           <input class="alloc-input" id="alloc-input" type="number" min="1" inputmode="numeric" placeholder="0">
-          <button class="alloc-btn primary" id="alloc-confirm" onclick="doAlloc()">投入</button>
+          <button class="alloc-btn primary" id="alloc-confirm" onclick="doAlloc()">确认</button>
         </div>
-        <button class="alloc-btn secondary" id="alloc-all" onclick="doAllocAll()">一键投入全部剩余 ★</button>
-        <div class="alloc-hint" id="alloc-hint-txt">奖励池余额：0 ★</div>
+        <button class="alloc-btn secondary" id="alloc-all" onclick="doAllocAll()">All in</button>
       </div>
       <div class="wdtl-actions">
         <button class="dtl-btn" onclick="editFromWDtl()">编辑</button>
-        <button class="dtl-btn" id="wdtl-redeem-btn" onclick="redeemFromDtl()">兑换奖励</button>
+        <button class="dtl-btn" id="wdtl-redeem-btn" onclick="redeemFromDtl()">兑换</button>
         <button class="dtl-btn danger" onclick="deleteFromWDtl()">删除</button>
       </div>
+    </div>
+  </div>
+
+  <!-- CONGRATS SCREEN -->
+  <div id="congrats" style="display:none;position:absolute;inset:0;z-index:30;background:var(--bg);flex-direction:column;align-items:center;justify-content:center;gap:20px;padding:40px;">
+    <div id="congrats-ico" style="font-size:72px;line-height:1;"></div>
+    <div style="font-family:'DM Serif Display',serif;font-size:28px;color:var(--text1);text-align:center;">恭喜你！</div>
+    <div id="congrats-name" style="font-size:16px;color:var(--text2);text-align:center;line-height:1.6;"></div>
+    <div style="display:flex;flex-direction:column;gap:10px;width:100%;margin-top:10px;">
+      <button onclick="closeCongrats()" style="padding:16px;background:linear-gradient(135deg,#50B888,#2A7050);border:none;border-radius:16px;font-family:'DM Sans',sans-serif;font-size:15px;font-weight:600;color:#fff;cursor:pointer;box-shadow:3px 4px 12px var(--green-glow);">继续加油 ✦</button>
     </div>
   </div>
 
@@ -492,6 +505,33 @@ const PAL=[
 const TODAY=new Date(),TKEY=fmt(TODAY);
 function fmt(d){return d.toISOString().slice(0,10);}
 
+// ── AUTO MIGRATION: reads from any older prefix if current is empty ──
+(function migrate(){
+  const CUR='hs5_';
+  if(localStorage.getItem(CUR+'h')) return; // already on current version
+  const OLD_PREFIXES=['hs4_','hs3_','hs2_','hs_'];
+  for(const pfx of OLD_PREFIXES){
+    const h=localStorage.getItem(pfx+'h');
+    if(!h) continue;
+    // found old data — copy everything over
+    ['h','w','c','lg'].forEach(k=>{
+      const v=localStorage.getItem(pfx+k);
+      if(v!=null) localStorage.setItem(CUR+k,v);
+    });
+    // migrate today's check-in key if it exists
+    const oldCk=localStorage.getItem(pfx+'ck_'+fmt(TODAY));
+    if(oldCk) localStorage.setItem(CUR+'ck_'+fmt(TODAY),oldCk);
+    // ensure wishes have allocated field
+    try{
+      const wishes=JSON.parse(localStorage.getItem(CUR+'w')||'[]');
+      wishes.forEach(w=>{if(w.allocated===undefined)w.allocated=0;});
+      localStorage.setItem(CUR+'w',JSON.stringify(wishes));
+    }catch(e){}
+    console.log('Migrated data from',pfx,'to',CUR);
+    break;
+  }
+})();
+
 let habits=JSON.parse(localStorage.getItem('hs5_h')||'null')||[
   {id:1,name:'喝8杯水',icon:'💧',color:PAL[0],reward:2,startDate:'2025-03-01',checks:{},streak:7,totalChecks:18,archived:false},
   {id:2,name:'运动30分钟',icon:'🏃',color:PAL[1],reward:5,startDate:'2025-03-05',checks:{},streak:3,totalChecks:9,archived:false},
@@ -533,97 +573,113 @@ function switchTab(tab){
 
 const MSGS=['从第一个习惯开始今天吧','很好，已经起步了 ✦','节奏不错，继续','已完成一半以上','只差最后一步了','全部完成，今天很棒 ✦'];
 function palFor(h){return h.color||PAL[habits.indexOf(h)%PAL.length];}
+function totalEarned(){return log.filter(l=>l.type==='earn').reduce((s,l)=>s+l.coins,0);}
 
 // ③ LONG-PRESS DRAG — no visible handle
 // ── DRAG REORDER (touch long-press + desktop drag) ──
-let _lpTimer=null,_ghost=null,_dragIdx=null,_dragList=null,_dragCb=null,_dragParent=null,_startY=0,_offsetY=0;
+let _lpTimer=null,_ghost=null,_dragIdx=null,_dragList=null,_dragCb=null,_dragParent=null,_startY=0,_offsetY=0,_isDragging=false;
 
-function _clearGhost(){
+function _clearGhost(doRender){
   if(_ghost){_ghost.remove();_ghost=null;}
   if(_dragParent){
-    [..._dragParent.children].forEach(c=>c.style.opacity='');
+    [..._dragParent.children].forEach(c=>{c.style.opacity='';c.style.transform='';});
     _dragParent=null;
   }
-  _dragIdx=null;_dragList=null;_dragCb=null;
+  if(doRender&&_dragCb) _dragCb();
+  _dragIdx=null;_dragList=null;_dragCb=null;_isDragging=false;
 }
 
 function setupDrag(card,idx,list,cb){
-  // Touch: long-press activates, then drag
   card.addEventListener('touchstart',e=>{
     const t=e.touches[0];
     _startY=t.clientY;
     _lpTimer=setTimeout(()=>{
-      navigator.vibrate&&navigator.vibrate([20]);
+      _isDragging=true;
+      navigator.vibrate&&navigator.vibrate([25]);
       _dragIdx=idx;_dragList=list;_dragCb=cb;_dragParent=card.parentElement;
-      // create ghost
       const r=card.getBoundingClientRect();
       _offsetY=t.clientY-r.top;
       _ghost=card.cloneNode(true);
       Object.assign(_ghost.style,{
-        position:'fixed',left:r.left+'px',top:r.top+'px',
-        width:r.width+'px',zIndex:99,pointerEvents:'none',
-        opacity:'.92',transform:'scale(1.03)',
-        boxShadow:'0 12px 32px rgba(0,0,0,.18)',
-        transition:'none',borderRadius:'var(--r-lg)',
+        position:'fixed',left:r.left+'px',top:(t.clientY-_offsetY)+'px',
+        width:r.width+'px',zIndex:999,pointerEvents:'none',
+        opacity:'.9',transform:'scale(1.04)',
+        boxShadow:'0 16px 40px rgba(0,0,0,.22)',
+        transition:'none',background:'var(--bg)',
+        borderRadius:'16px',
       });
       document.body.appendChild(_ghost);
-      card.style.opacity='.3';
+      card.style.opacity='.25';
     },420);
   },{passive:true});
 
   card.addEventListener('touchmove',e=>{
-    // cancel long-press if finger moved before activation
-    if(!_ghost){
-      if(Math.abs(e.touches[0].clientY-_startY)>8) clearTimeout(_lpTimer);
+    if(!_isDragging){
+      if(Math.abs(e.touches[0].clientY-_startY)>10) clearTimeout(_lpTimer);
       return;
     }
     e.preventDefault();
     const t=e.touches[0];
-    // move ghost
-    _ghost.style.top=(t.clientY-_offsetY)+'px';
-    // find which card the finger is over
-    _ghost.style.display='none';
+    if(_ghost) _ghost.style.top=(t.clientY-_offsetY)+'px';
+    // detect target without triggering ghost
+    if(_ghost) _ghost.style.visibility='hidden';
     const el=document.elementFromPoint(t.clientX,t.clientY);
-    _ghost.style.display='';
-    if(!el)return;
+    if(_ghost) _ghost.style.visibility='';
+    if(!el||!_dragParent) return;
     const target=el.closest('.hcard,.wcard');
-    if(!target||target===card||!_dragParent.contains(target))return;
-    const siblings=[..._dragParent.children].filter(c=>c.classList.contains('hcard')||c.classList.contains('wcard'));
+    if(!target||!_dragParent.contains(target)) return;
+    const siblings=[..._dragParent.children].filter(c=>
+      c.classList.contains('hcard')||c.classList.contains('wcard')
+    );
     const ti=siblings.indexOf(target);
-    if(ti<0||ti===_dragIdx)return;
+    if(ti<0||ti===_dragIdx) return;
+    // reorder in-place without re-rendering
     const item=_dragList.splice(_dragIdx,1)[0];
     _dragList.splice(ti,0,item);
     _dragIdx=ti;
-    persist();_dragCb();
-    // after re-render card ref is stale — find new card at same index
-    setTimeout(()=>{
-      const newCards=[..._dragParent.children].filter(c=>c.classList.contains('hcard')||c.classList.contains('wcard'));
-      if(newCards[_dragIdx]) newCards[_dragIdx].style.opacity='.3';
-    },0);
+    // visually swap DOM nodes
+    if(ti>siblings.indexOf(card)){
+      target.parentNode.insertBefore(card,target.nextSibling);
+    } else {
+      target.parentNode.insertBefore(card,target);
+    }
+    card.style.opacity='.25';
   },{passive:false});
 
   card.addEventListener('touchend',()=>{
     clearTimeout(_lpTimer);
-    _clearGhost();
+    if(_isDragging){ persist();_clearGhost(true); }
   });
   card.addEventListener('touchcancel',()=>{
     clearTimeout(_lpTimer);
-    _clearGhost();
+    if(_isDragging) _clearGhost(true);
   });
 
   // Desktop drag
   card.draggable=true;
-  card.addEventListener('dragstart',e=>{
-    _dragIdx=idx;_dragList=list;_dragCb=cb;
+  card.addEventListener('dragstart',()=>{
+    _dragIdx=idx;_dragList=list;_dragCb=cb;_dragParent=card.parentElement;
     card.classList.add('dragging');
   });
-  card.addEventListener('dragend',()=>{card.classList.remove('dragging');_dragIdx=null;});
+  card.addEventListener('dragend',()=>{
+    card.classList.remove('dragging');
+    persist();if(_dragCb)_dragCb();
+    _dragIdx=null;_dragList=null;_dragCb=null;_dragParent=null;
+  });
   card.addEventListener('dragover',e=>{
     e.preventDefault();
-    if(_dragIdx===null||_dragIdx===idx)return;
+    if(_dragIdx===null||_dragIdx===idx) return;
     const item=_dragList.splice(_dragIdx,1)[0];
     _dragList.splice(idx,0,item);
-    _dragIdx=idx;persist();_dragCb();
+    _dragIdx=idx;
+    const parent=card.parentElement;
+    const allCards=[...parent.children].filter(c=>c.classList.contains('hcard')||c.classList.contains('wcard'));
+    // DOM swap
+    if(idx>allCards.indexOf(card)){
+      parent.insertBefore(allCards[allCards.indexOf(card)],card.nextSibling);
+    } else {
+      parent.insertBefore(card,allCards[idx]);
+    }
   });
 }
 
@@ -676,7 +732,7 @@ function renderH(){
   document.getElementById('pdone').textContent=done;
   document.getElementById('ptotal').textContent=total;
   document.getElementById('phint').textContent=MSGS[done===total&&total>0?5:Math.min(Math.floor(done/Math.max(total,1)*4.99),4)];
-  document.getElementById('coins').textContent=coins;
+  document.getElementById('coins').textContent=totalEarned();
 }
 
 function toggle(id){
@@ -753,6 +809,7 @@ function switchWS(s){
   wseg=s;
   document.getElementById('ws-active').classList.toggle('active',s==='active');
   document.getElementById('ws-archive').classList.toggle('active',s==='archive');
+  document.getElementById('w-add-btn').style.display=s==='active'?'':'none';
   renderW();
 }
 function renderW(){
@@ -804,7 +861,7 @@ function renderW(){
 function updatePool(){
   document.getElementById('pool-val').innerHTML=coins+' <span style="font-size:20px;">★</span>';
   document.getElementById('pool-sub').textContent=coins>0?'点击奖励项目进行分配':'打卡后星星将累积在这里';
-  document.getElementById('coins').textContent=coins;
+  document.getElementById('coins').textContent=totalEarned();
 }
 function reuse(id){
   const w=wishes.find(x=>x.id===id);if(!w)return;
@@ -832,6 +889,7 @@ function refreshWDtl(){
   const alloc=w.allocated||0;
   const pct=Math.min(100,Math.round(alloc/w.cost*100));
   const remaining=Math.max(0,w.cost-alloc);
+  const canRedeem=alloc>=w.cost;
   document.getElementById('wdtl-title').textContent=w.name;
   document.getElementById('wdtl-ico').textContent=w.icon;
   document.getElementById('wdtl-name').textContent=w.name;
@@ -840,17 +898,18 @@ function refreshWDtl(){
   document.getElementById('wdtl-pct').textContent=pct;
   document.getElementById('wdtl-fill').style.width=pct+'%';
   document.getElementById('wdtl-pool').textContent=coins;
-  document.getElementById('wdtl-hint').textContent=remaining>0?'还需分配 '+remaining+' ★ 即可兑换':'★ 已达兑换条件，可立即兑换！';
-  document.getElementById('alloc-hint-txt').textContent='奖励池余额：'+coins+' ★';
+  document.getElementById('wdtl-hint').textContent=remaining>0?'还需分配 '+remaining+' ★ 即可兑换':'已达兑换条件，可立即兑换 🎉';
+  document.getElementById('alloc-pool-lbl').textContent=coins;
   document.getElementById('alloc-input').value='';
   document.getElementById('alloc-input').max=coins;
-  const canRedeem=alloc>=w.cost&&!w.archived;
+  document.getElementById('alloc-confirm').disabled=coins<=0;
+  const ab=document.getElementById('alloc-all');
+  ab.disabled=coins<=0;
+  ab.textContent='All in'+(coins>0?' ('+coins+' ★)':'');
   const rb=document.getElementById('wdtl-redeem-btn');
-  rb.textContent=canRedeem?'🎉 立即兑换':'兑换（待达标）';
-  rb.style.color=canRedeem?'var(--green)':'var(--text3)';
   rb.disabled=!canRedeem;
-  document.getElementById('alloc-all').disabled=coins<=0;
-  document.getElementById('alloc-all').textContent='一键投入全部剩余 ★（'+coins+' ★）';
+  rb.style.color=canRedeem?'var(--green)':'var(--text3)';
+  rb.style.opacity=canRedeem?'1':'0.45';
 }
 function closeWDtl(){document.getElementById('wdtl').classList.remove('open');wdid=null;renderW();}
 function editFromWDtl(){const id=wdid;closeWDtl();openWM(id);}
@@ -859,7 +918,18 @@ function redeemFromDtl(){
   if((w.allocated||0)<w.cost){toast('星星还不够哦，继续分配吧');return;}
   w.archived=true;
   log.unshift({type:'spend',name:'兑换：'+w.name,icon:w.icon,coins:w.cost,time:new Date().toLocaleString('zh-CN',{month:'numeric',day:'numeric',hour:'2-digit',minute:'2-digit'})});
-  persist();closeWDtl();toast('🎉  「'+w.name+'」已兑换！');
+  persist();
+  // show congrats
+  document.getElementById('congrats-ico').textContent=w.icon;
+  document.getElementById('congrats-name').textContent='「'+w.name+'」已成功兑换！\n你的坚持值得这份奖励 ✦';
+  const cg=document.getElementById('congrats');
+  cg.style.display='flex';
+  // confetti-like pulse
+  cg.style.animation='none';
+}
+function closeCongrats(){
+  document.getElementById('congrats').style.display='none';
+  closeWDtl();
 }
 function deleteFromWDtl(){
   const w=wishes.find(x=>x.id===wdid);if(!w)return;
